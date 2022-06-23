@@ -134,3 +134,15 @@ func TestService_FindPaymentById_faid(t *testing.T) {
 		return
 	}
 }
+func BenchmarkConcurrentlyFilterPayments(b *testing.B) {
+	svc := newTestService()
+	_, _, err := svc.addAccount(defaultTestAccount)
+	if err != nil {
+		b.Error(err)
+		return
+	}
+
+	for i := 0; i < b.N; i++ {
+
+	}
+}

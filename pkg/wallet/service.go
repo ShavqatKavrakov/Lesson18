@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/ShavqatKavrakov/Lesson18/pkg/types"
 	"github.com/google/uuid"
@@ -91,15 +92,53 @@ func (s *Service) FindPaymentById(paymentId string) (*types.Payment, error) {
 	}
 	return nil, ErrPaymentNotFound
 }
-func (s *Service) SumPayments(goroutines int) types.Money {
+func (s *Service) FilterPayments(accountID int64, goroutines int) ([]types.Payment, error) {
+	_, err := s.FindAccountById(accountID)
+	if err != nil {
+		return nil, err
+	}
+	var paymens []types.Payment
+	for _, payment := range s.payments {
+		if accountID == payment.AccountID {
+			paymens = append(paymens, *payment)
+		}
+	}
+	return paymens, nil
+}
+func (s *Service) ConcurrentlyFilterPayments(accountID int64, goroutines int) ([]types.Payment, error) {
+	_, err := s.FindAccountById(accountID)
+	if err != nil {
+		return nil, err
+	}
+	wg := sync.WaitGroup{}
+	mu := sync.Mutex{}
+	var paymets []types.Payment
 	count := len(s.payments) / goroutines
 	if len(s.payments)%goroutines != 0 {
 		count += 1
 	}
-	for i := 1; i <= goroutines; i++ {
-		go func() {
-
-		}()
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		var val []types.Payment
+		go func(index int) {
+			defer wg.Done()
+			if len(s.payments) < (index+1)*count {
+				for _, payment := range s.payments[index*count:] {
+					if payment.AccountID == accountID {
+						val = append(val, *payment)
+					}
+				}
+			}
+			for _, payment := range s.payments[index*count : (index+1)*count] {
+				if payment.AccountID == accountID {
+					val = append(val, *payment)
+				}
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			paymets = append(paymets, val...)
+		}(i)
 	}
-	return 0
+	wg.Wait()
+	return paymets, nil
 }
