@@ -91,3 +91,15 @@ func (s *Service) FindPaymentById(paymentId string) (*types.Payment, error) {
 	}
 	return nil, ErrPaymentNotFound
 }
+func (s *Service) SumPayments(goroutines int) types.Money {
+	count := len(s.payments) / goroutines
+	if len(s.payments)%goroutines != 0 {
+		count += 1
+	}
+	for i := 1; i <= goroutines; i++ {
+		go func() {
+
+		}()
+	}
+	return 0
+}
